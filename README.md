@@ -78,3 +78,4 @@ Author: [@chooyan-eng](https://github.com/chooyan-eng)
 ![Configurable Crop](./screenshots/cyig_3.gif)
 
 # crop_your_image_to_box
+# crop_your_image_to_box
