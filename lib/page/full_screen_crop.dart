@@ -1,4 +1,3 @@
-import 'dart:ffi';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:crop_your_image/crop_your_image.dart';
@@ -15,8 +14,7 @@ class FullScreenCrop extends StatefulWidget {
 
 class _FullScreenCropState extends State<FullScreenCrop> {
   final _controller = CropController();
-  List<Rect> rects = [];
-  late Rect rect;
+  late Rect _rect;
 
   var _isProcessing = false;
   set isProcessing(bool value) {
@@ -56,10 +54,6 @@ class _FullScreenCropState extends State<FullScreenCrop> {
               icon: Icon(Icons.redo),
               onPressed: () => croppedData = null,
             ),
-          IconButton(
-            icon: Icon(Icons.fitbit_sharp),
-            onPressed: () => croppedData = null,
-          ),
         ],
         iconTheme: IconThemeData(
           color: Colors.black87,
@@ -71,7 +65,8 @@ class _FullScreenCropState extends State<FullScreenCrop> {
             ? Visibility(
                 visible: _croppedData == null,
                 child: Crop(
-                  onMoved: (value) => rect = value,
+                  onMoved: (value) =>
+                      _rect = value, //saved current rect coordinates
                   controller: _controller,
                   image: imageData.loadData[1],
                   onCropped: (cropped) {
@@ -80,33 +75,17 @@ class _FullScreenCropState extends State<FullScreenCrop> {
                   },
                 ),
                 replacement: _croppedData != null
-                    ? FutureBuilder<ui.Image>(
-                        future: _loadUiImgFromBytes(imageData.loadData[1]),
-                        builder:
-                            (BuildContext context, AsyncSnapshot snapshot) {
-                          if (snapshot.hasError) {
-                            final error = snapshot.error;
-                            return Center(child: Text("$error"));
-                          } else if (snapshot.hasData) {
-                            return Center(
-                              child: FittedBox(
-                                child: SizedBox(
-                                  width: snapshot.data.width.toDouble(),
-                                  height: snapshot.data.height.toDouble(),
-                                  child: CustomPaint(
-                                    painter: RectPainterOnImg(
-                                        rect: rect, img: snapshot.data),
-                                  ),
-                                ),
-                              ),
-                            );
-                          } else {
-                            return Center(child: Text("waiting"));
-                          }
-                        },
+                    ? Stack(
+                        children: [
+                          Center(child: Image.memory(imageData.loadData[1])),
+                          CustomPaint(
+                            painter: RectPainter(
+                                rect:
+                                    _rect), //drawing the rect using the coordinates
+                          )
+                        ],
                       )
-                    : const SizedBox.shrink(),
-              )
+                    : Container())
             : const SizedBox.shrink(),
         replacement: const Center(child: CircularProgressIndicator()),
       ),
@@ -114,15 +93,13 @@ class _FullScreenCropState extends State<FullScreenCrop> {
   }
 }
 
-class RectPainterOnImg extends CustomPainter {
+class RectPainter extends CustomPainter {
   Rect rect;
-  ui.Image img;
 
-  RectPainterOnImg({required this.img, required this.rect});
+  RectPainter({required this.rect});
 
   @override
   void paint(Canvas canvas, Size size) {
-    canvas.drawImage(img, Offset.zero, Paint());
     var paintRec = Paint()
       ..color = ui.Color.fromARGB(255, 255, 0, 0)
       ..strokeWidth = 10
@@ -132,10 +109,5 @@ class RectPainterOnImg extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(RectPainterOnImg oldDelegate) =>
-      this.img != oldDelegate.img;
-}
-
-Future<ui.Image> _loadUiImgFromBytes(Uint8List img) async {
-  return await decodeImageFromList(img);
+  bool shouldRepaint(RectPainter oldDelegate) => this.rect != oldDelegate.rect;
 }
